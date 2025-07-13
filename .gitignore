@@ -1,0 +1,7 @@
+known_faces/*.jpg
+known_faces/*.png
+known_faces/*.jpeg
+__pycache__/
+*.pyc
+.DS_Store
+*.log

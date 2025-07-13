@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  face-unlock:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./known_faces:/app/known_faces
+      - ./static:/app/static
+      - ./templates:/app/templates
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    stdin_open: true
+    tty: true
+    # Para acceso a cámara en Windows
+    privileged: true
