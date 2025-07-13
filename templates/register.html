@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧬 Registro Biométrico - Face Unlock</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .dna-helix {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.05;
+        }
+
+        .helix-strand {
+            position: absolute;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, #00d4ff, #00ff88);
+            animation: helix-rotate 10s linear infinite;
+        }
+
+        @keyframes helix-rotate {
+            from { transform: rotateZ(0deg); }
+            to { transform: rotateZ(360deg); }
+        }
+
+        .container {
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 80px rgba(0, 255, 136, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+        }
+
+        .bio-scanner {
+            font-size: 4.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #00ff88, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: bio-glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes bio-glow {
+            from { filter: drop-shadow(0 0 20px #00ff88); }
+            to { filter: drop-shadow(0 0 30px #00d4ff); }
+        }
+
+        h1 {
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: #a0a0b8;
+            margin-bottom: 2.5rem;
+            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            color: #00ff88;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            border-radius: 12px;
+            font-size: 1rem;
+            background: rgba(26, 26, 46, 0.8);
+            color: #ffffff;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            background: rgba(26, 26, 46, 0.9);
+        }
+
+        input[type="text"]::placeholder {
+            color: #6a6a8a;
+        }
+
+        .camera-container {
+            position: relative;
+            margin: 2rem 0;
+            border-radius: 20px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(0, 255, 136, 0.2);
+            box-shadow: inset 0 0 50px rgba(0, 255, 136, 0.1);
+        }
+
+        .bio-frame {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            bottom: 15px;
+            border: 3px solid transparent;
+            border-radius: 15px;
+            background: linear-gradient(45deg, #00ff88, #00d4ff, #00ff88) border-box;
+            -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: subtract;
+            mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            mask-composite: subtract;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .bio-frame.active {
+            opacity: 1;
+            animation: bio-scan 3s infinite;
+        }
+
+        @keyframes bio-scan {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 15px;
+        }
+
+        .placeholder {
+            color: #6a6a8a;
+            font-size: 1.1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .placeholder-icon {
+            font-size: 3rem;
+            opacity: 0.5;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            margin: 2.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            color: #1a1a2e;
+            box-shadow: 0 8px 32px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 255, 136, 0.4);
+            background: linear-gradient(135deg, #00ff99 0%, #00dd77 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: #ffffff;
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-capture {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+            color: #ffffff;
+            box-shadow: 0 8px 32px rgba(255, 107, 107, 0.3);
+        }
+
+        .btn-capture:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(255, 107, 107, 0.4);
+        }
+
+        .status {
+            margin: 1.5rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+
+        .status.success {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .status.error {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+
+        .status.info {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .back-link {
+            margin-top: 2.5rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .back-link a {
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .back-link a:hover {
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        canvas {
+            display: none;
+        }
+
+        .progress-indicator {
+            display: none;
+            margin: 1rem 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00d4ff);
+            width: 0%;
+            animation: progress-animate 3s ease-in-out;
+        }
+
+        @keyframes progress-animate {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dna-helix">
+        <div class="helix-strand" style="left: 20%; animation-delay: 0s;"></div>
+        <div class="helix-strand" style="right: 25%; animation-delay: 3s;"></div>
+    </div>
+
+    <div class="container">
+        <div class="bio-scanner">🧬</div>
+        <h1>Registro Biométrico</h1>
+        <p class="subtitle">Configura tu perfil de identificación facial</p>
+
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="name">Identificador de Usuario</label>
+                <input type="text" id="name" name="name" placeholder="Ingresa tu nombre o ID" required>
+            </div>
+
+            <div class="camera-container">
+                <div class="bio-frame" id="bioFrame"></div>
+                <video id="video" autoplay muted style="display: none;"></video>
+                <div id="placeholder" class="placeholder">
+                    <div class="placeholder-icon">🔬</div>
+                    <div>Activa el scanner biométrico para comenzar</div>
+                </div>
+            </div>
+
+            <div class="progress-indicator" id="progressIndicator">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+
+            <div class="buttons">
+                <button type="button" id="startCamera" class="btn-primary">🔋 Activar Scanner</button>
+                <button type="button" id="capturePhoto" class="btn-capture" style="display: none;">📸 Capturar Biometría</button>
+                <button type="submit" id="registerBtn" class="btn-success" style="display: none;">💾 Guardar Perfil</button>
+            </div>
+
+            <canvas id="canvas"></canvas>
+        </form>
+
+        <div id="status" class="status" style="display: none;"></div>
+
+        <div class="back-link">
+            <p><a href="/">⬅️ Volver al scanner principal</a></p>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const placeholder = document.getElementById('placeholder');
+        const bioFrame = document.getElementById('bioFrame');
+        const startBtn = document.getElementById('startCamera');
+        const captureBtn = document.getElementById('capturePhoto');
+        const registerBtn = document.getElementById('registerBtn');
+        const status = document.getElementById('status');
+        const nameInput = document.getElementById('name');
+        const form = document.getElementById('registerForm');
+        const progressIndicator = document.getElementById('progressIndicator');
+
+        let capturedImage = null;
+        let stream = null;
+
+        function showStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function hideStatus() {
+            status.style.display = 'none';
+        }
+
+        startBtn.onclick = async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 } 
+                });
+                video.srcObject = stream;
+                video.style.display = 'block';
+                placeholder.style.display = 'none';
+                bioFrame.classList.add('active');
+                startBtn.style.display = 'none';
+                captureBtn.style.display = 'inline-block';
+                showStatus('🔍 Scanner biométrico activado. Posiciona tu rostro correctamente.', 'success');
+            } catch (err) {
+                showStatus('❌ Error al acceder al dispositivo biométrico: ' + err.message, 'error');
+            }
+        };
+
+        captureBtn.onclick = () => {
+            progressIndicator.style.display = 'block';
+            
+            setTimeout(() => {
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0);
+                
+                capturedImage = canvas.toDataURL('image/jpeg', 0.8);
+                
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                
+                video.style.display = 'none';
+                bioFrame.classList.remove('active');
+                placeholder.style.display = 'flex';
+                placeholder.innerHTML = '<div class="placeholder-icon">✅</div><div>Biometría capturada exitosamente</div>';
+                captureBtn.style.display = 'none';
+                registerBtn.style.display = 'inline-block';
+                progressIndicator.style.display = 'none';
+                showStatus('🎯 Datos biométricos procesados. Presiona "Guardar Perfil" para completar.', 'success');
+            }, 3000);
+        };
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const name = nameInput.value.trim();
+            if (!name) {
+                showStatus('⚠️ Por favor ingresa tu identificador de usuario.', 'error');
+                return;
+            }
+
+            if (!capturedImage) {
+                showStatus('⚠️ Por favor captura tus datos biométricos primero.', 'error');
+                return;
+            }
+
+            registerBtn.disabled = true;
+            registerBtn.textContent = '🔄 Procesando...';
+            showStatus('🧬 Analizando y guardando perfil biométrico...', 'info');
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        image: capturedImage
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('✅ Perfil biométrico registrado exitosamente', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    showStatus('❌ ' + result.message, 'error');
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = '💾 Guardar Perfil';
+                }
+            } catch (err) {
+                showStatus('❌ Error en el sistema biométrico: ' + err.message, 'error');
+                registerBtn.disabled = false;
+                registerBtn.textContent = '💾 Guardar Perfil';
+            }
+        };
+    </script>
+</body>
+</html>

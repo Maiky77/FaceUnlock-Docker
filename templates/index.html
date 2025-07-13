@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Face Unlock System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+        }
+
+        .circuit {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border: 2px solid #00d4ff;
+            border-radius: 50%;
+            animation: pulse-ring 4s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.3; }
+            100% { transform: scale(0.8); opacity: 1; }
+        }
+
+        .container {
+            background: rgba(26, 26, 46, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.4),
+                0 0 80px rgba(0, 212, 255, 0.1);
+            text-align: center;
+            max-width: 520px;
+            width: 90%;
+            position: relative;
+        }
+
+        .face-scanner {
+            font-size: 4.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 20px #00d4ff); }
+            to { filter: drop-shadow(0 0 30px #0099cc); }
+        }
+
+        h1 {
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: #a0a0b8;
+            margin-bottom: 2.5rem;
+            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        .video-container {
+            position: relative;
+            margin: 2rem 0;
+            border-radius: 20px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(0, 212, 255, 0.2);
+            box-shadow: inset 0 0 50px rgba(0, 212, 255, 0.1);
+        }
+
+        .scan-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            border: 3px solid #00d4ff;
+            border-radius: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .scan-overlay.active {
+            opacity: 1;
+            animation: scan-border 2s infinite;
+        }
+
+        @keyframes scan-border {
+            0% { border-color: #00d4ff; box-shadow: 0 0 20px #00d4ff; }
+            50% { border-color: #00ff88; box-shadow: 0 0 30px #00ff88; }
+            100% { border-color: #00d4ff; box-shadow: 0 0 20px #00d4ff; }
+        }
+
+        #video {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 15px;
+        }
+
+        .placeholder {
+            color: #6a6a8a;
+            font-size: 1.1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .placeholder-icon {
+            font-size: 3rem;
+            opacity: 0.5;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            margin: 2.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: #ffffff;
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 212, 255, 0.4);
+            background: linear-gradient(135deg, #00e5ff 0%, #00b8e6 100%);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+            color: #1a1a2e;
+            box-shadow: 0 8px 32px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 255, 136, 0.4);
+        }
+
+        .status {
+            margin: 1.5rem 0;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+        }
+
+        .status.success {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .status.error {
+            background: rgba(255, 71, 87, 0.2);
+            color: #ff4757;
+            border: 1px solid rgba(255, 71, 87, 0.3);
+        }
+
+        .status.info {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .register-link {
+            margin-top: 2.5rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .register-link a {
+            color: #00d4ff;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .register-link a:hover {
+            background: rgba(0, 212, 255, 0.1);
+            text-decoration: none;
+        }
+
+        #authResult {
+            display: none;
+        }
+
+        .tech-info {
+            position: absolute;
+            top: -60px;
+            right: -60px;
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 50%;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation">
+        <div class="circuit" style="top: 10%; left: 10%;"></div>
+        <div class="circuit" style="bottom: 20%; right: 15%; animation-delay: 2s;"></div>
+    </div>
+
+    <div class="container">
+        <div class="tech-info">🤖</div>
+        
+        <div class="face-scanner">👁️</div>
+        <h1>Face Unlock</h1>
+        <p class="subtitle">Sistema de autenticación biométrica avanzada</p>
+
+        <div class="video-container">
+            <div class="scan-overlay" id="scanOverlay"></div>
+            <img id="video" style="display: none;" alt="Video Stream">
+            <div id="placeholder" class="placeholder">
+                <div class="placeholder-icon">📱</div>
+                <div>Presiona "Activar Scanner" para iniciar</div>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button id="startCamera" class="btn-primary">🔋 Activar Scanner</button>
+            <button id="stopCamera" class="btn-secondary" style="display: none;">⏹️ Detener</button>
+            <button id="authenticate" class="btn-success" style="display: none;">🔍 Escanear Rostro</button>
+        </div>
+
+        <div id="status" class="status" style="display: none;"></div>
+        <div id="authResult"></div>
+
+        <div class="register-link">
+            <p>¿Usuario nuevo? <a href="/register">Registrar perfil biométrico</a></p>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const video = document.getElementById('video');
+        const placeholder = document.getElementById('placeholder');
+        const scanOverlay = document.getElementById('scanOverlay');
+        const startBtn = document.getElementById('startCamera');
+        const stopBtn = document.getElementById('stopCamera');
+        const authBtn = document.getElementById('authenticate');
+        const status = document.getElementById('status');
+        const authResult = document.getElementById('authResult');
+
+        function showStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function hideStatus() {
+            status.style.display = 'none';
+        }
+
+        startBtn.onclick = () => {
+            socket.emit('start_camera');
+            showStatus('🔄 Inicializando scanner biométrico...', 'info');
+        };
+
+        stopBtn.onclick = () => {
+            socket.emit('stop_camera');
+            scanOverlay.classList.remove('active');
+            hideStatus();
+        };
+
+        authBtn.onclick = () => {
+            socket.emit('authenticate');
+            scanOverlay.classList.add('active');
+            showStatus('🔍 Analizando patrones faciales...', 'info');
+            authBtn.disabled = true;
+            setTimeout(() => {
+                authBtn.disabled = false;
+                scanOverlay.classList.remove('active');
+            }, 3000);
+        };
+
+        socket.on('camera_status', (data) => {
+            if (data.status === 'started') {
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+                authBtn.style.display = 'inline-block';
+                placeholder.style.display = 'none';
+                video.style.display = 'block';
+                showStatus('✅ Scanner biométrico activado', 'success');
+            } else if (data.status === 'stopped') {
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+                authBtn.style.display = 'none';
+                placeholder.style.display = 'flex';
+                video.style.display = 'none';
+                hideStatus();
+            }
+        });
+
+        socket.on('video_frame', (data) => {
+            video.src = 'data:image/jpeg;base64,' + data.frame;
+        });
+
+        socket.on('auth_result', (data) => {
+            scanOverlay.classList.remove('active');
+            if (data.success) {
+                showStatus(`🎯 Acceso autorizado - ${data.name} (Precisión: ${data.confidence}%)`, 'success');
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 2000);
+            } else {
+                showStatus(`❌ ${data.message}`, 'error');
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            socket.emit('stop_camera');
+        });
+    </script>
+</body>
+</html>
