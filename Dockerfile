@@ -1,31 +1,23 @@
 # Usar Python 3.11 en Ubuntu
 FROM python:3.11-slim
 
-# Instalar dependencias del sistema necesarias para OpenCV, dlib y face_recognition
+# Instalar dependencias básicas para OpenCV y face_recognition
 RUN apt-get update && apt-get install -y \
     cmake \
     build-essential \
+    python3-dev \
+    python3-pip \
     libopencv-dev \
     python3-opencv \
-    libboost-all-dev \
-    libgtk-3-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
     libavcodec-dev \
     libavformat-dev \
     libswscale-dev \
     libv4l-dev \
-    libxvidcore-dev \
-    libx264-dev \
-    libjpeg-dev \
-    libpng-dev \
-    libtiff-dev \
-    gfortran \
-    openexr \
     libatlas-base-dev \
-    python3-dev \
-    python3-numpy \
-    libtbb2 \
-    libtbb-dev \
-    libdc1394-22-dev \
+    gfortran \
     && rm -rf /var/lib/apt/lists/*
 
 # Establecer directorio de trabajo

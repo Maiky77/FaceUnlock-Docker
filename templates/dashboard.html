@@ -313,6 +313,16 @@
             box-shadow: 0 12px 40px rgba(255, 107, 107, 0.4);
         }
 
+        .updating {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
         .tech-stack {
             margin-top: 2rem;
             text-align: center;
@@ -368,28 +378,28 @@
                     </div>
                     <div class="stats-grid">
                         <div class="stat-item">
-                            <span class="stat-number">99.7%</span>
+                            <span class="stat-number" id="precision">0%</span>
                             <span class="stat-label">Precisión</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number">1.2s</span>
+                            <span class="stat-number" id="avg_time">0s</span>
                             <span class="stat-label">Tiempo Auth</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number">256-bit</span>
-                            <span class="stat-label">Encriptación</span>
+                            <span class="stat-number" id="users">0</span>
+                            <span class="stat-label">Usuarios</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number">99.9%</span>
+                            <span class="stat-number" id="uptime">0%</span>
                             <span class="stat-label">Uptime</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number">4K</span>
-                            <span class="stat-label">Resolución</span>
+                            <span class="stat-number" id="total_auths">0</span>
+                            <span class="stat-label">Autenticaciones</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number">24/7</span>
-                            <span class="stat-label">Monitoreo</span>
+                            <span class="stat-number" id="cpu">0%</span>
+                            <span class="stat-label">CPU</span>
                         </div>
                     </div>
                 </div>
@@ -402,8 +412,8 @@
                     <div class="features-grid">
                         <div class="feature-card">
                             <div class="feature-icon">🧠</div>
-                            <div class="feature-title">IA Avanzada</div>
-                            <div class="feature-desc">Algoritmos de machine learning con redes neuronales profundas para reconocimiento facial de alta precisión</div>
+                            <div class="feature-title">Reconocimiento de Patrones</div>
+                            <div class="feature-desc">Algoritmos de comparación de histogramas para análisis de similitud facial</div>
                         </div>
                         
                         <div class="feature-card">
@@ -420,8 +430,8 @@
                         
                         <div class="feature-card">
                             <div class="feature-icon">🔐</div>
-                            <div class="feature-title">Seguridad Biométrica</div>
-                            <div class="feature-desc">Autenticación basada en características faciales únicas e imposibles de replicar</div>
+                            <div class="feature-title">Autenticación Biométrica</div>
+                            <div class="feature-desc">Sistema de comparación de firmas digitales basadas en características de imagen</div>
                         </div>
                         
                         <div class="feature-card">
@@ -447,23 +457,23 @@
                     </div>
                     <div class="status-item">
                         <span class="status-label">Cámara</span>
-                        <span class="status-value">● Activa</span>
+                        <span class="status-value" id="camera_status">● Verificando...</span>
                     </div>
                     <div class="status-item">
-                        <span class="status-label">IA Engine</span>
-                        <span class="status-value">● Online</span>
+                        <span class="status-label">Engine</span>
+                        <span class="status-value" id="engine_status">● Online</span>
                     </div>
                     <div class="status-item">
                         <span class="status-label">Base Datos</span>
-                        <span class="status-value">● Conectada</span>
+                        <span class="status-value" id="db_status">● Conectada</span>
                     </div>
                     <div class="status-item">
                         <span class="status-label">API</span>
-                        <span class="status-value">● Funcional</span>
+                        <span class="status-value" id="api_status">● Funcional</span>
                     </div>
                     <div class="status-item">
-                        <span class="status-label">Seguridad</span>
-                        <span class="status-value">● Máxima</span>
+                        <span class="status-label">Memoria</span>
+                        <span class="status-value" id="memory_usage">● 0%</span>
                     </div>
                 </div>
 
@@ -488,15 +498,65 @@
             <span class="tech-badge">Flask</span>
             <span class="tech-badge">Socket.IO</span>
             <span class="tech-badge">OpenCV</span>
-            <span class="tech-badge">Face Recognition</span>
-            <span class="tech-badge">Docker</span>
             <span class="tech-badge">NumPy</span>
-            <span class="tech-badge">dlib</span>
+            <span class="tech-badge">Pillow</span>
+            <span class="tech-badge">Docker</span>
             <span class="tech-badge">JavaScript ES6</span>
             <span class="tech-badge">HTML5 Canvas</span>
             <span class="tech-badge">CSS3 Grid</span>
             <span class="tech-badge">WebRTC</span>
+            <span class="tech-badge">psutil</span>
         </div>
     </div>
+
+    <script>
+        // Función para actualizar las estadísticas en tiempo real
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/system_stats');
+                const stats = await response.json();
+                
+                // Actualizar métricas con animación
+                updateValue('precision', `${stats.precision}%`);
+                updateValue('avg_time', `${stats.avg_auth_time}s`);
+                updateValue('users', stats.registered_users);
+                updateValue('uptime', `${stats.uptime}%`);
+                updateValue('total_auths', stats.total_auths);
+                updateValue('cpu', `${stats.cpu_usage}%`);
+                
+                // Actualizar estados del sistema
+                document.getElementById('camera_status').textContent = `● ${stats.camera_status}`;
+                document.getElementById('engine_status').textContent = `● Online`;
+                document.getElementById('db_status').textContent = `● ${stats.database_status}`;
+                document.getElementById('api_status').textContent = `● ${stats.api_status}`;
+                document.getElementById('memory_usage').textContent = `● ${stats.memory_usage}%`;
+                
+                console.log('📊 Estadísticas actualizadas:', stats);
+            } catch (error) {
+                console.error('❌ Error actualizando estadísticas:', error);
+            }
+        }
+        
+        function updateValue(elementId, newValue) {
+            const element = document.getElementById(elementId);
+            if (element && element.textContent !== newValue) {
+                element.classList.add('updating');
+                setTimeout(() => {
+                    element.textContent = newValue;
+                    element.classList.remove('updating');
+                }, 200);
+            }
+        }
+        
+        // Actualizar estadísticas cada 3 segundos
+        updateStats(); // Carga inicial
+        setInterval(updateStats, 3000);
+        
+        // Mostrar timestamp de última actualización
+        setInterval(() => {
+            const now = new Date().toLocaleTimeString();
+            console.log(`🕐 Última actualización: ${now}`);
+        }, 3000);
+    </script>
 </body>
 </html>

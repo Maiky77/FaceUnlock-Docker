@@ -1,0 +1,9 @@
+{
+  "total_authentications": 32,
+  "successful_authentications": 12,
+  "failed_authentications": 20,
+  "last_auth_time": 0.003793478012084961,
+  "average_auth_time": 0.003956904619312418,
+  "system_start_time": 1752495920.6308212,
+  "registered_users": 3
+}

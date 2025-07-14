@@ -252,10 +252,6 @@
             text-decoration: none;
         }
 
-        #authResult {
-            display: none;
-        }
-
         .tech-info {
             position: absolute;
             top: -60px;
@@ -293,7 +289,8 @@
 
         <div class="video-container">
             <div class="scan-overlay" id="scanOverlay"></div>
-            <img id="video" style="display: none;" alt="Video Stream">
+            <video id="video" autoplay playsinline muted style="display: none;"></video>
+
             <div id="placeholder" class="placeholder">
                 <div class="placeholder-icon">📱</div>
                 <div>Presiona "Activar Scanner" para iniciar</div>
@@ -307,7 +304,6 @@
         </div>
 
         <div id="status" class="status" style="display: none;"></div>
-        <div id="authResult"></div>
 
         <div class="register-link">
             <p>¿Usuario nuevo? <a href="/register">Registrar perfil biométrico</a></p>
@@ -323,7 +319,9 @@
         const stopBtn = document.getElementById('stopCamera');
         const authBtn = document.getElementById('authenticate');
         const status = document.getElementById('status');
-        const authResult = document.getElementById('authResult');
+
+        let stream = null;
+        let registeredFaces = [];
 
         function showStatus(message, type = 'info') {
             status.textContent = message;
@@ -335,64 +333,131 @@
             status.style.display = 'none';
         }
 
+        // Cargar caras registradas desde el servidor
+        async function loadRegisteredFaces() {
+            try {
+                const response = await fetch('/api/get_faces');
+                const data = await response.json();
+                registeredFaces = data.faces || [];
+                console.log(`📚 Caras cargadas: ${registeredFaces.length}`);
+                console.log(`👥 Usuarios: ${registeredFaces.map(f => f.name).join(', ')}`);
+            } catch (error) {
+                console.error('Error cargando caras:', error);
+            }
+        }
+
+        // BOTÓN ACTIVAR SCANNER
         startBtn.onclick = () => {
-            socket.emit('start_camera');
-            showStatus('🔄 Inicializando scanner biométrico...', 'info');
+            console.log('🔋 Iniciando scanner...');
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            authBtn.style.display = 'inline-block';
+            placeholder.style.display = 'none';
+            video.style.display = 'block';
+            showStatus('✅ Scanner biométrico activado', 'success');
+
+            navigator.mediaDevices.getUserMedia({ 
+                video: { width: 640, height: 480 } 
+            })
+            .then(s => {
+                stream = s;
+                video.srcObject = stream;
+                video.play();
+                console.log('📹 Video funcionando correctamente');
+                
+                // Cargar caras registradas
+                loadRegisteredFaces();
+            })
+            .catch(err => {
+                console.error('❌ Error accediendo a cámara:', err);
+                showStatus('❌ No se pudo acceder a la cámara', 'error');
+            });
         };
 
+        // BOTÓN DETENER
         stopBtn.onclick = () => {
-            socket.emit('stop_camera');
+            console.log('⏹️ Deteniendo scanner...');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
             scanOverlay.classList.remove('active');
             hideStatus();
+
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            authBtn.style.display = 'none';
+            placeholder.style.display = 'flex';
+            video.style.display = 'none';
         };
 
-        authBtn.onclick = () => {
-            socket.emit('authenticate');
+        // BOTÓN AUTENTICAR
+        authBtn.onclick = async () => {
+            console.log('🔍 Iniciando autenticación...');
+            
+            if (!stream || video.videoWidth === 0) {
+                showStatus('❌ Cámara no está lista', 'error');
+                return;
+            }
+
+            if (registeredFaces.length === 0) {
+                showStatus('❌ No hay caras registradas en el sistema', 'error');
+                return;
+            }
+
             scanOverlay.classList.add('active');
             showStatus('🔍 Analizando patrones faciales...', 'info');
             authBtn.disabled = true;
-            setTimeout(() => {
-                authBtn.disabled = false;
+
+            // Capturar frame actual
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+            try {
+                const response = await fetch('/api/authenticate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: imageData
+                    })
+                });
+
+                const result = await response.json();
+                
                 scanOverlay.classList.remove('active');
-            }, 3000);
+                authBtn.disabled = false;
+
+                if (result.success) {
+                    showStatus(`🎯 Acceso autorizado - ${result.name} (Precisión: ${result.confidence}%)`, 'success');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 2000);
+                } else {
+                    showStatus(`❌ ${result.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error en autenticación:', error);
+                scanOverlay.classList.remove('active');
+                authBtn.disabled = false;
+                showStatus('❌ Error en el procesamiento', 'error');
+            }
         };
 
-        socket.on('camera_status', (data) => {
-            if (data.status === 'started') {
-                startBtn.style.display = 'none';
-                stopBtn.style.display = 'inline-block';
-                authBtn.style.display = 'inline-block';
-                placeholder.style.display = 'none';
-                video.style.display = 'block';
-                showStatus('✅ Scanner biométrico activado', 'success');
-            } else if (data.status === 'stopped') {
-                startBtn.style.display = 'inline-block';
-                stopBtn.style.display = 'none';
-                authBtn.style.display = 'none';
-                placeholder.style.display = 'flex';
-                video.style.display = 'none';
-                hideStatus();
-            }
-        });
-
-        socket.on('video_frame', (data) => {
-            video.src = 'data:image/jpeg;base64,' + data.frame;
-        });
-
-        socket.on('auth_result', (data) => {
-            scanOverlay.classList.remove('active');
-            if (data.success) {
-                showStatus(`🎯 Acceso autorizado - ${data.name} (Precisión: ${data.confidence}%)`, 'success');
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 2000);
-            } else {
-                showStatus(`❌ ${data.message}`, 'error');
-            }
+        // Conectar socket
+        socket.on('connect', () => {
+            console.log('🔌 Conectado al servidor');
         });
 
         window.addEventListener('beforeunload', () => {
-            socket.emit('stop_camera');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
         });
     </script>
 </body>
